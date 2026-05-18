@@ -1,29 +1,40 @@
-# RAG Q&A System
+# AI Document Intelligence System
 
-This project is a full-stack Retrieval-Augmented Generation (RAG) application for asking questions over uploaded documents.
+AI Document Intelligence System is a Retrieval-Augmented Generation (RAG) application that lets users upload documents, index them into a vector database, and ask natural-language questions grounded in the uploaded content.
 
-Users can upload PDF, TXT, MD, and CSV files, store them in named collections, and ask natural-language questions grounded in those documents. The backend handles document processing, chunking, embeddings, vector search, and answer generation. The frontend provides a simple interface for uploading files, managing collections, and chatting with the assistant.
+The project uses a FastAPI backend for document ingestion and question answering, a React frontend for the user interface, ChromaDB for vector storage, sentence-transformers for embeddings, and Groq-hosted LLMs for final response generation.
 
-## What This Project Does
+## Screenshots
 
-- Uploads documents into a knowledge base
-- Splits document text into searchable chunks
-- Converts chunks into embeddings using `sentence-transformers`
-- Stores embeddings in ChromaDB
-- Retrieves the most relevant chunks for a user question
-- Sends retrieved context to a Groq-hosted LLM
-- Returns an answer with source references
+### Home Screen
+
+![Home screen](assets/screenshots/home-screen.png)
+
+### Q&A Response
+
+![Q&A screen](assets/screenshots/qa-screen.png)
+
+## Features
+
+- Upload and index `PDF`, `TXT`, `MD`, and `CSV` files
+- Create a searchable knowledge base using semantic embeddings
+- Ask document-grounded questions through a chat interface
+- Retrieve source-backed answers with citation-style references
+- Organize knowledge by collection
+- View chunk counts and selected model information in the UI
 
 ## Tech Stack
 
 ### Backend
 
+- Python 3.12
 - FastAPI
+- Uvicorn
 - ChromaDB
 - sentence-transformers
 - PyPDF
-- Groq API
 - langchain-text-splitters
+- Groq Python SDK
 
 ### Frontend
 
@@ -33,245 +44,53 @@ Users can upload PDF, TXT, MD, and CSV files, store them in named collections, a
 - Tailwind CSS
 - lucide-react
 
+## How It Works
+
+1. A user uploads one or more supported documents from the frontend.
+2. The backend extracts text from each file and splits it into overlapping chunks.
+3. Each chunk is converted into an embedding using `all-MiniLM-L6-v2`.
+4. The embeddings and metadata are stored in a ChromaDB collection.
+5. When the user asks a question, the backend embeds the query and retrieves the most relevant chunks.
+6. The retrieved context is sent to the Groq LLM, which generates a grounded answer.
+7. The frontend displays the answer along with source references.
+
 ## Project Structure
 
 ```text
 xyz/
 ├── README.md
-└── rag-qa-system/
-    ├── frontend/
-    │   ├── src/
-    │   │   ├── components/
-    │   │   ├── services/
-    │   │   ├── types/
-    │   │   ├── App.tsx
-    │   │   └── main.tsx
-    │   ├── package.json
-    │   └── vite.config.ts
-    └── rag-backend/
-        ├── app/
-        │   ├── models/
-        │   ├── routers/
-        │   ├── services/
-        │   └── main.py
-        ├── pyproject.toml
-        └── chroma_data/
+├── requirements.txt
+├── install_all_requirements.sh
+├── REQUIREMENTS_SETUP.md
+├── assets/
+│   └── screenshots/
+├── rag-qa-system/
+│   ├── frontend/
+│   └── rag-backend/
+└── thesis-diagrams/
 ```
 
-## How The System Works
+## Installation
 
-### 1. Document Upload
+Use the one-step installer from the repository root:
 
-The frontend sends selected files to the backend endpoint:
+```bash
+cd "/Users/dannyjadhav/RAG AI /xyz"
+chmod +x install_all_requirements.sh
+./install_all_requirements.sh
+```
 
-`POST /api/documents/upload`
+This installer:
 
-The backend:
-
-1. saves the uploaded file to a temporary location
-2. extracts text based on file type
-3. splits text into chunks
-4. generates embeddings for those chunks
-5. stores the chunks and metadata in a Chroma collection
-
-### 2. Question Answering
-
-The frontend sends a question to:
-
-`POST /api/qa/ask`
-
-The backend:
-
-1. embeds the user question
-2. retrieves the top matching chunks from ChromaDB
-3. builds a prompt containing those chunks
-4. sends the prompt to the Groq LLM
-5. returns the generated answer plus source chunks
-
-### 3. Source Attribution
-
-Each retrieved chunk includes metadata such as:
-
-- source filename
-- page number when available
-- chunk index
-- relevance score
-
-The frontend shows those sources below each assistant response.
-
-## Backend Overview
-
-### Main App
-
-[`rag-qa-system/rag-backend/app/main.py`](/Users/dannyjadhav/RAG AI /xyz/rag-qa-system/rag-backend/app/main.py)
-
-- creates the FastAPI app
-- loads environment variables
-- enables CORS for frontend access
-- registers routers
-- exposes `/healthz`
-- exposes `/api/config`
-
-### API Schemas
-
-[`rag-qa-system/rag-backend/app/models/schemas.py`](/Users/dannyjadhav/RAG AI /xyz/rag-qa-system/rag-backend/app/models/schemas.py)
-
-Defines request and response models such as:
-
-- `QueryRequest`
-- `QueryResponse`
-- `UploadResponse`
-- `CollectionInfo`
-- `StatsResponse`
-
-### Document Routes
-
-[`rag-qa-system/rag-backend/app/routers/documents.py`](/Users/dannyjadhav/RAG AI /xyz/rag-qa-system/rag-backend/app/routers/documents.py)
-
-Provides endpoints for:
-
-- uploading documents
-- listing collections
-- deleting collections
-- returning collection statistics
-
-### QA Route
-
-[`rag-qa-system/rag-backend/app/routers/qa.py`](/Users/dannyjadhav/RAG AI /xyz/rag-qa-system/rag-backend/app/routers/qa.py)
-
-Validates that a collection exists and contains data, then runs the RAG pipeline to answer the question.
-
-### Document Processing Service
-
-[`rag-qa-system/rag-backend/app/services/document_processor.py`](/Users/dannyjadhav/RAG AI /xyz/rag-qa-system/rag-backend/app/services/document_processor.py)
-
-Responsible for:
-
-- saving uploaded files
-- extracting text from PDF and text-based files
-- splitting text into chunks
-- attaching metadata to each chunk
-
-### Vector Store Service
-
-[`rag-qa-system/rag-backend/app/services/vector_store.py`](/Users/dannyjadhav/RAG AI /xyz/rag-qa-system/rag-backend/app/services/vector_store.py)
-
-Responsible for:
-
-- creating the persistent Chroma client
-- loading the embedding model
-- embedding texts and questions
-- storing chunks in collections
-- retrieving relevant chunks
-- listing and deleting collections
-
-### RAG Pipeline
-
-[`rag-qa-system/rag-backend/app/services/rag_pipeline.py`](/Users/dannyjadhav/RAG AI /xyz/rag-qa-system/rag-backend/app/services/rag_pipeline.py)
-
-Responsible for:
-
-- retrieving relevant chunks
-- formatting prompt context
-- calling the Groq chat completion API
-- returning the answer, model name, token count, and sources
-
-## Frontend Overview
-
-### App Shell
-
-[`rag-qa-system/frontend/src/App.tsx`](/Users/dannyjadhav/RAG AI /xyz/rag-qa-system/frontend/src/App.tsx)
-
-Stores the active collection and renders:
-
-- `Sidebar`
-- `ChatArea`
-
-### API Client
-
-[`rag-qa-system/frontend/src/services/api.ts`](/Users/dannyjadhav/RAG AI /xyz/rag-qa-system/frontend/src/services/api.ts)
-
-Wraps all backend calls:
-
-- `checkConfig`
-- `uploadDocuments`
-- `askQuestion`
-- `getCollections`
-- `deleteCollection`
-- `getStats`
-
-### Sidebar
-
-[`rag-qa-system/frontend/src/components/Sidebar.tsx`](/Users/dannyjadhav/RAG AI /xyz/rag-qa-system/frontend/src/components/Sidebar.tsx)
-
-Lets the user:
-
-- view collections
-- switch collections
-- create a collection name
-- refresh collection data
-- delete a collection
-- upload documents through the embedded uploader
-
-### File Upload Component
-
-[`rag-qa-system/frontend/src/components/FileUpload.tsx`](/Users/dannyjadhav/RAG AI /xyz/rag-qa-system/frontend/src/components/FileUpload.tsx)
-
-Handles:
-
-- drag and drop
-- file selection
-- upload requests
-- success and error display
-
-### Chat Area
-
-[`rag-qa-system/frontend/src/components/ChatArea.tsx`](/Users/dannyjadhav/RAG AI /xyz/rag-qa-system/frontend/src/components/ChatArea.tsx)
-
-Handles:
-
-- chat state
-- question submission
-- loading state
-- error state
-- rendering assistant and user messages
-
-### Chat Message Renderer
-
-[`rag-qa-system/frontend/src/components/ChatMessage.tsx`](/Users/dannyjadhav/RAG AI /xyz/rag-qa-system/frontend/src/components/ChatMessage.tsx)
-
-Displays:
-
-- user or assistant message bubble
-- source chunk list
-- relevance score
-- model name
-- token count
-- timestamps
-
-## API Endpoints
-
-### Health and Config
-
-- `GET /healthz`
-- `GET /api/config`
-
-### Documents
-
-- `POST /api/documents/upload`
-- `GET /api/documents/collections`
-- `DELETE /api/documents/collections/{collection_name}`
-- `GET /api/documents/stats`
-
-### Q&A
-
-- `POST /api/qa/ask`
+- creates a backend virtual environment at `rag-qa-system/rag-backend/.venv`
+- installs Python dependencies from `requirements.txt`
+- installs frontend dependencies from `rag-qa-system/frontend/package.json`
 
 ## Environment Variables
 
 ### Backend
 
-Create a `.env` file in `rag-qa-system/rag-backend/`:
+Create [`rag-qa-system/rag-backend/.env`](/Users/dannyjadhav/RAG%20AI%20/xyz/rag-qa-system/rag-backend/.env) with:
 
 ```env
 GROQ_API_KEY=your_groq_api_key
@@ -282,78 +101,62 @@ LLM_MODEL=llama-3.3-70b-versatile
 
 ### Frontend
 
-Create a `.env` file in `rag-qa-system/frontend/`:
+Create [`rag-qa-system/frontend/.env`](/Users/dannyjadhav/RAG%20AI%20/xyz/rag-qa-system/frontend/.env) with:
 
 ```env
 VITE_API_URL=http://localhost:8000
 ```
 
-## Local Setup
+## Running the Project
 
-### 1. Start the Backend
-
-From `rag-qa-system/rag-backend/`:
+### Start the Backend
 
 ```bash
-poetry install
-poetry run uvicorn app.main:app --reload
+cd "/Users/dannyjadhav/RAG AI /xyz/rag-qa-system/rag-backend"
+source .venv/bin/activate
+uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-The backend will run at:
+Backend URLs:
 
-`http://localhost:8000`
+- `http://127.0.0.1:8000`
+- `http://127.0.0.1:8000/healthz`
 
-### 2. Start the Frontend
-
-From `rag-qa-system/frontend/`:
+### Start the Frontend
 
 ```bash
-npm install
-npm run dev
+cd "/Users/dannyjadhav/RAG AI /xyz/rag-qa-system/frontend"
+npm run dev -- --host 127.0.0.1 --port 5173
 ```
 
-The frontend will usually run at:
+Frontend URL:
 
-`http://localhost:5173`
+- `http://127.0.0.1:5173`
 
-## Typical Usage Flow
+## API Overview
 
-1. start the backend
-2. start the frontend
-3. create or select a collection
-4. upload one or more documents
-5. wait for processing and embedding to finish
-6. ask a question about the uploaded content
-7. inspect the answer and source citations
+### Document Routes
 
-## Data Storage
+- `POST /api/documents/upload`
+- `GET /api/documents/collections`
+- `DELETE /api/documents/collections/{name}`
+- `GET /api/documents/stats`
 
-- Vector data is stored in `rag-qa-system/rag-backend/chroma_data/`
-- Uploaded files are processed through temporary files and are not stored permanently by the app itself
-- Chroma collections persist across runs unless deleted
+### Q&A Route
 
-## Supported File Types
+- `POST /api/qa/ask`
 
-- `.pdf`
-- `.txt`
-- `.md`
-- `.csv`
+## Current Models
+
+- Embedding model: `all-MiniLM-L6-v2`
+- LLM: `llama-3.3-70b-versatile` through Groq
 
 ## Notes
 
-- The frontend `node_modules/` directory contains installed dependencies and is not part of the handwritten app logic.
-- The `chroma_data/` folder contains generated vector database files.
-- The backend currently allows all CORS origins for easier local full-stack development.
+- The vector database is stored locally in `rag-qa-system/rag-backend/chroma_data`
+- Uploaded files are processed temporarily, but the chunk embeddings remain stored in ChromaDB
+- A valid Groq API key is required for answer generation
 
-## Security Note
+## Repository
 
-Do not commit real API keys into `.env.example` or source control. If a real Groq key has already been exposed, rotate it immediately and replace it with a placeholder value.
-
-## Future Improvements
-
-- add tests for document ingestion and question answering
-- support more document types such as DOCX
-- add streaming responses in the chat UI
-- improve collection creation and validation
-- add authentication and per-user document spaces
-- show upload history and document-level management
+GitHub: [danny8806/AI-Document-Intelligence-Sys](https://github.com/danny8806/AI-Document-Intelligence-Sys)
